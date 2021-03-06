@@ -27,12 +27,12 @@ namespace discord_bot
 			await client.StartAsync();
 			await Task.Delay(-1);
 		}
-		private async Task<object> WriteDownMessage(SocketMessage message)
+		private static async Task<object> WriteDownMessage(SocketMessage message)
 		{
-			Console.WriteLine("{0} {1} {2}:{3}", DateTime.Now.ToLongTimeString() , message.Channel.Name, message.Author.Username, message.Content);
+			Console.WriteLine("{0} {1} {2}:{3}", DateTime.Now.ToLongTimeString(), message.Channel.Name, message.Author.Username, message.Content);
 			return await Task.FromResult<object>(null);
 		}
-		private async Task<object> CheckByeBye(SocketMessage message)
+		private static async Task<object> CheckByeBye(SocketMessage message)
 		{
 			if (message.Content == "byebye")
 			{
@@ -40,10 +40,11 @@ namespace discord_bot
 			}
 			return await Task.FromResult<object>(null);
 		}
-		private Task Log(LogMessage message)
+		private static Task Log(LogMessage message)
 		{
 			Console.WriteLine(message.ToString());
 			return Task.CompletedTask;
 		}
+
 	}
 }

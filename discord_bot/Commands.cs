@@ -2,26 +2,15 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Discord.WebSocket;
+using static discord_bot.Utility;
 
 namespace discord_bot
 {
-	class Commands
+	static class Commands
 	{
-		private static readonly char PREFIX = '!';
-		private static readonly ulong SARYO_ID = 353199430687653898;
-		private static readonly ulong WATCHING_ID = 241192743345455105;
-		enum Error
-		{
-			UserNotFound,
-			CommandUndefined,
-			UnknownCommand,
-		}
-		private static readonly Dictionary<Error, string> ErrorMessage = new()
-		{
-			{ Error.UserNotFound, "そんな人しらなーいヽ(`Д´)ﾉ" },
-			{ Error.CommandUndefined, $"🚧工事中🚧" },
-			{ Error.UnknownCommand, $"すみません、上手く聞き取れませんでした" },
-		};
+		private const char PREFIX = '!';
+		private const ulong SARYO_ID = 353199430687653898;
+		private const ulong WATCHING_ID = 241192743345455105;
 		enum Type
 		{
 			hello,
@@ -144,7 +133,7 @@ namespace discord_bot
 		{
 			if (message.Channel is SocketGuildChannel channel)
 			{
-				VoiceChannel voicechannel = await VoiceChannel.Construct(channel.Guild);
+				SexRoom voicechannel = await SexRoom.Construct(message.Channel, channel.Guild);
 			}
 		}
 		private static async Task CreateBlackhole(SocketMessage message, List<string> param)
