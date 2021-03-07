@@ -63,7 +63,7 @@ namespace discord_bot
 			}
 			else
 			{
-				await message.Channel.SendMessageAsync($"{ErrorMessage[Error.UnknownCommand]}");
+				await SendError(message.Channel, Error.UnknownCommand);
 			}
 		}
 		private static string get_command(Type type)
@@ -85,7 +85,7 @@ namespace discord_bot
 		}
 		private static async Task ShowDetailedHelp(SocketMessage message, List<string> param)
 		{
-			await message.Channel.SendMessageAsync($"{ErrorMessage[Error.CommandUndefined]}");
+			await SendError(message.Channel, Error.CommandUndefined);
 		}
 		private static async Task Summon(SocketMessage message, List<string> param)
 		{
@@ -95,7 +95,7 @@ namespace discord_bot
 			}
 			else
 			{
-				await message.Channel.SendMessageAsync($"{ErrorMessage[Error.UserNotFound]}");
+				await SendError(message.Channel, Error.UserNotFound);
 			}
 
 		}
@@ -113,7 +113,7 @@ namespace discord_bot
 		{
 			if (await message.Channel.GetUserAsync(WATCHING_ID) is not SocketGuildUser watching || !watching.VoiceState.HasValue)
 			{
-				await message.Channel.SendMessageAsync($"{ErrorMessage[Error.UserNotFound]}");
+				await SendError(message.Channel, Error.UserNotFound);
 				return;
 			}
 			await watching.ModifyAsync((target) => target.Mute = true);
@@ -123,7 +123,7 @@ namespace discord_bot
 		{
 			if (await message.Channel.GetUserAsync(WATCHING_ID) is not SocketGuildUser watching || !watching.VoiceState.HasValue)
 			{
-				await message.Channel.SendMessageAsync($"{ErrorMessage[Error.UserNotFound]}");
+				await SendError(message.Channel, Error.UserNotFound);
 				return;
 			}
 			await watching.ModifyAsync((target) => target.Mute = false);
@@ -133,24 +133,33 @@ namespace discord_bot
 		{
 			if (message.Channel is SocketGuildChannel channel)
 			{
-				SexRoom voicechannel = await SexRoom.Construct(message.Channel, channel.Guild);
+				await SexRoom.Construct(message.Channel, channel.Guild);
 			}
 		}
 		private static async Task CreateBlackhole(SocketMessage message, List<string> param)
 		{
-			await message.Channel.SendMessageAsync($"{ErrorMessage[Error.CommandUndefined]}");
+			if (message.Channel is SocketGuildChannel channel)
+			{
+				await Blackhole.Construct(message.Channel, channel.Guild, message.Author as SocketGuildUser);
+			}
 		}
 		private static async Task CreateWhitehole(SocketMessage message, List<string> param)
 		{
-			await message.Channel.SendMessageAsync($"{ErrorMessage[Error.CommandUndefined]}");
+			if (message.Channel is SocketGuildChannel channel)
+			{
+				await Whitehole.Construct(message.Channel, channel.Guild, message.Author as SocketGuildUser);
+			}
 		}
 		private static async Task SpeakingClientConnect(SocketMessage message, List<string> param)
 		{
-			await message.Channel.SendMessageAsync($"{ErrorMessage[Error.CommandUndefined]}");
+			if (message.Author is SocketGuildUser caller)
+			{
+				await VoiceClient.Construct(caller);
+			}
 		}
 		private static async Task SpeakingClientDisconnect(SocketMessage message, List<string> param)
 		{
-			await message.Channel.SendMessageAsync($"{ErrorMessage[Error.CommandUndefined]}");
+			await SendError(message.Channel, Error.CommandUndefined);
 		}
 	}
 }

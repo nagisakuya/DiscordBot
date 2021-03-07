@@ -15,6 +15,7 @@ namespace discord_bot
 			CommandUndefined,
 			UnknownCommand,
 			NotEnoughUsers,
+			FizzedOut,
 		}
 		public static readonly Dictionary<Error, string> ErrorMessage = new()
 		{
@@ -22,7 +23,12 @@ namespace discord_bot
 			{ Error.CommandUndefined, $"🚧工事中🚧" },
 			{ Error.UnknownCommand, $"すみません、上手く聞き取れませんでした" },
 			{ Error.NotEnoughUsers, $"*しかし誰も来なかった" },
+			{ Error.FizzedOut, $"しかし なにも おこらなかった！" },
 		};
+		public static async Task SendError(ISocketMessageChannel channel , Error error)
+		{
+			await channel.SendMessageAsync($"{ ErrorMessage[error] }");
+		}
 		public static IList<Type> ChooseRandom<Type>(IList<Type> ronly , uint number = 1)
 		{
 			/*if (from.Count > number)
