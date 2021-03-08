@@ -63,6 +63,7 @@ namespace discord_bot
 		}
 		protected Process CreateStream(string path)
 		{
+			Console.WriteLine("FFMPEGCalled");
 			return Process.Start(new ProcessStartInfo
 			{
 				FileName = Config.Instance.FFMPEG.PATH ,
@@ -95,9 +96,11 @@ namespace discord_bot
 			var wav_path = await JTalk.Generate(message.Content);
 			using var ffmpeg = CreateStream(wav_path);
 			using var output = ffmpeg.StandardOutput.BaseStream;
+			//Console.WriteLine("ReadingStart");
 			try { await output.CopyToAsync(audio_stream); }
 			finally { await audio_stream.FlushAsync(); File.Delete(wav_path); }
-			
+			//Console.WriteLine("ReadingFinished");
+
 		}
 		public Task CatchMessage(SocketMessage message)
 		{

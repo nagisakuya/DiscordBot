@@ -178,7 +178,7 @@ namespace discord_bot
 		[Summary("ボイスチャンネルのbotに別れを告げます")]
 		public async Task SpeakingClientDisconnect()
 		{
-			await SendError(Context.Channel, Error.CommandUndefined);
+			await VoiceClient.Bye(Context);
 		}
 	}
 }

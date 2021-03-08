@@ -24,7 +24,7 @@ namespace discord_bot
 			public Discord DISCORD { get; set; }
 			public class JTalk
 			{
-				public string BINPATH { get; set; }
+				public string PATH { get; set; }
 				public string DICPATH { get; set; }
 				public string VOICEPATH { get; set; }
 			}

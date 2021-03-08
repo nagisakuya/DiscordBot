@@ -14,24 +14,22 @@ namespace discord_bot
 		private static int counter = 0;
 		public static async Task<string> Generate(string text)
 		{
+			//Console.WriteLine("JTalkCalled");
 			int current = counter++;
 
-			string jtalk_path = $@"{Config.Instance.JTALK.BINPATH}/open_jtalk.exe";
-			string wav_path = $@"{Config.Instance.JTALK.BINPATH}/{current}.wav";
-			string voice_path = $@"{Config.Instance.JTALK.VOICEPATH}/mei_normal.htsvoice";
+			string wav_path = Path.Combine( Environment.CurrentDirectory,$"{current}.wav");
+			string voice_path = Path.Combine(Config.Instance.JTALK.VOICEPATH,"mei_normal.htsvoice");
 			var app = new ProcessStartInfo
 			{
-				WorkingDirectory = Config.Instance.JTALK.BINPATH,
-				FileName = jtalk_path,
-				UseShellExecute = false,
+				FileName = Config.Instance.JTALK.PATH,
 				RedirectStandardInput = true,
-				CreateNoWindow = true,
 				ArgumentList = { "-m" , voice_path , "-r" , "0.6" , "-x" , Config.Instance.JTALK.DICPATH, "-ow" , wav_path },
 			};
 			var process = Process.Start(app);
 			process.StandardInput.Write(text);
 			process.StandardInput.Close();
 			await process.WaitForExitAsync();
+			//Console.WriteLine("WAVGenereated");
 			return wav_path;
 
 		}
