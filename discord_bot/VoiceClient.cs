@@ -8,6 +8,7 @@ using Discord.WebSocket;
 using Discord.Audio;
 using Discord.Rest;
 using System.Diagnostics;
+using System.IO;
 using static discord_bot.Utility;
 using static discord_bot.Program;
 
@@ -52,7 +53,7 @@ namespace discord_bot
 		{
 			return Process.Start(new ProcessStartInfo
 			{
-				FileName = "\"C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe\"",
+				FileName = Config.Instance.FFMPEG.PATH ,
 				Arguments = $"-hide_banner -loglevel panic -i \"{path}\" -ac 2 -f s16le -ar 48000 pipe:1",
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
@@ -79,11 +80,12 @@ namespace discord_bot
 		}
 		public async Task Read(IUserMessage message)
 		{
-			using var ffmpeg = CreateStream(await JTalk.Generate(message.Content));
+			var wav_path = await JTalk.Generate(message.Content);
+			using var ffmpeg = CreateStream(wav_path);
 			using var output = ffmpeg.StandardOutput.BaseStream;
-			//using var discord = audio_client.CreatePCMStream(AudioApplication.Music);
 			try { await output.CopyToAsync(audio_stream); }
-			finally { await audio_stream.FlushAsync(); }
+			finally { await audio_stream.FlushAsync(); File.Delete(wav_path); }
+			
 		}
 		public Task CatchMessage(SocketMessage message)
 		{

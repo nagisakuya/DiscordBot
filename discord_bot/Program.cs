@@ -8,11 +8,41 @@ using Discord.Audio;
 using Discord.Net;
 using Discord.Commands;
 using discord_bot;
+using Microsoft.Extensions.Configuration;
 
 namespace discord_bot
 {
 	class Program
 	{
+		public class Config
+		{
+			public static Config Instance;
+			public class JTalk
+			{
+				public string BINPATH { get; set; }
+				public string DICPATH { get; set; }
+				public string VOICEPATH { get; set; }
+			}
+			public JTalk JTALK { get; set; }
+			public class ffmpeg
+			{
+				public string PATH { get; set; }
+			}
+			public ffmpeg FFMPEG { get; set; }
+			public static Config Get()
+			{
+				if (Instance != null) return Instance;
+
+				Instance = new ConfigurationBuilder()
+					.AddIniFile(".\\config.ini")
+					.Build()
+					.Get<Config>();
+				return Instance;
+			}
+		}
+
+		public static readonly Config CONFIG = Config.Get();
+
 		public static DiscordSocketClient client;
 		public static CommandService commands;
 

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using static discord_bot.Program;
 
 namespace discord_bot
 {
@@ -15,21 +16,17 @@ namespace discord_bot
 		{
 			int current = counter++;
 
-			string BINPATH = @"C:\open_jtalk\bin";
-			string VOICEPATH = @"C:\open_jtalk\voice";
-			string DICPATH = @"C:\open_jtalk\dic";
-
-			string jtalk_path = $@"{BINPATH}\open_jtalk.exe";
-			string voice_path = $@"{VOICEPATH}\mei_normal.htsvoice";
-			string wav_path = $@"{BINPATH}\{current}.wav";
+			string jtalk_path = $@"{Config.Instance.JTALK.BINPATH}\open_jtalk.exe";
+			string wav_path = $@"{Config.Instance.JTALK.BINPATH}\{current}.wav";
+			string voice_path = $@"{Config.Instance.JTALK.VOICEPATH}\mei_normal.htsvoice";
 			var app = new ProcessStartInfo
 			{
-				WorkingDirectory = BINPATH,
+				WorkingDirectory = Config.Instance.JTALK.BINPATH,
 				FileName = jtalk_path,
 				UseShellExecute = false,
 				RedirectStandardInput = true,
 				CreateNoWindow = true,
-				ArgumentList = { "-m" , voice_path , "-r" , "0.6" , "-x" , DICPATH , "-ow" , wav_path },
+				ArgumentList = { "-m" , voice_path , "-r" , "0.6" , "-x" , Config.Instance.JTALK.DICPATH, "-ow" , wav_path },
 			};
 			var process = Process.Start(app);
 			process.StandardInput.Write(text);
