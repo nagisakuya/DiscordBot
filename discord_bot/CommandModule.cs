@@ -53,7 +53,7 @@ namespace discord_bot
 		[Summary("挨拶します")]
 		public async Task SayHello()
 		{
-			await Context.Channel.SendMessageAsync($"こんにちは！🦀 watchinpoです！[{PREFIX}help] で使い方を確認できます！");
+			await Context.Channel.SendMessageAsync($"こんにちは！🦀 {client.CurrentUser.Username}です！\"{PREFIX}help\" で使い方を確認できます！");
 		}
 
 		[Command("help", RunMode = RunMode.Async)]
@@ -68,7 +68,7 @@ namespace discord_bot
 				string embedFieldText = command.Summary ?? "説明不要！\n";
 				embedBuilder.AddField(command.Name, embedFieldText);
 			}
-			await ReplyAsync($"{PREFIX}か{client.CurrentUser.Mention}を頭に付けて呼び出します！ ", false, embedBuilder.Build());
+			await ReplyAsync($"\"{PREFIX}\"か{client.CurrentUser.Mention}を頭に付けて呼び出します！ 例: !hello", false, embedBuilder.Build());
 		}
 
 		[Command("detailedhelp", RunMode = RunMode.Async)]

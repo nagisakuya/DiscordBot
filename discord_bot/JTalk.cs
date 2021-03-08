@@ -16,9 +16,9 @@ namespace discord_bot
 		{
 			int current = counter++;
 
-			string jtalk_path = $@"{Config.Instance.JTALK.BINPATH}\open_jtalk.exe";
-			string wav_path = $@"{Config.Instance.JTALK.BINPATH}\{current}.wav";
-			string voice_path = $@"{Config.Instance.JTALK.VOICEPATH}\mei_normal.htsvoice";
+			string jtalk_path = $@"{Config.Instance.JTALK.BINPATH}/open_jtalk.exe";
+			string wav_path = $@"{Config.Instance.JTALK.BINPATH}/{current}.wav";
+			string voice_path = $@"{Config.Instance.JTALK.VOICEPATH}/mei_normal.htsvoice";
 			var app = new ProcessStartInfo
 			{
 				WorkingDirectory = Config.Instance.JTALK.BINPATH,

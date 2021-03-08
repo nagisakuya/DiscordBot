@@ -17,6 +17,11 @@ namespace discord_bot
 		public class Config
 		{
 			public static Config Instance;
+			public class Discord
+			{
+				public string TOKEN { get; set; }
+			}
+			public Discord DISCORD { get; set; }
 			public class JTalk
 			{
 				public string BINPATH { get; set; }
@@ -34,7 +39,7 @@ namespace discord_bot
 				if (Instance != null) return Instance;
 
 				Instance = new ConfigurationBuilder()
-					.AddIniFile(".\\config.ini")
+					.AddIniFile(@"./config.ini")
 					.Build()
 					.Get<Config>();
 				return Instance;
@@ -60,8 +65,7 @@ namespace discord_bot
 			client.MessageReceived += LogMessage;
 			CommandModule command_module = new();
 			await command_module.InstallCommandsAsync();
-			string token = "ODE2NTI4ODg1NTU0NDc5MTI0.YD8RyA.souS_C6w8y29EEKh1kU7QKn0YNI";
-			await client.LoginAsync(TokenType.Bot, token);
+			await client.LoginAsync(TokenType.Bot, Config.Instance.DISCORD.TOKEN);
 			await client.StartAsync();
 			await Task.Delay(-1);
 		}

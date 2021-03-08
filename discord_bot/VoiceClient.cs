@@ -7,6 +7,7 @@ using Discord;
 using Discord.WebSocket;
 using Discord.Audio;
 using Discord.Rest;
+using Discord.Commands;
 using System.Diagnostics;
 using System.IO;
 using static discord_bot.Utility;
@@ -38,6 +39,17 @@ namespace discord_bot
 			active_voice_clients.Add(new_client.connected_guild.Id, new_client);
 			//Console.CancelKeyPress += new ConsoleCancelEventHandler(new_client.Delete);
 			return new_client;
+		}
+		public static async Task Bye(SocketCommandContext context)
+		{
+			if (active_voice_clients.TryGetValue(context.Guild.Id, out var client))
+			{
+				await client.Delete();
+			}
+			else
+			{
+				await SendError(context.Channel, Error.FizzedOut);
+			}
 		}
 		public void Delete(object sender, ConsoleCancelEventArgs args)
 		{
