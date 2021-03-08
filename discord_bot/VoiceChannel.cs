@@ -5,7 +5,9 @@ using System.Linq;
 using Discord;
 using Discord.WebSocket;
 using Discord.Rest;
+using Discord.Commands;
 using static discord_bot.Utility;
+using static discord_bot.Program;
 
 
 namespace discord_bot
@@ -23,7 +25,7 @@ namespace discord_bot
 		}
 		public void Delete(object sender, ConsoleCancelEventArgs args)
 		{
-			_ = Delete();
+			_ = voice_channel.DeleteAsync();
 		}
 		public async virtual Task Delete()
 		{
@@ -32,7 +34,7 @@ namespace discord_bot
 		}
 		public IList<SocketGuildUser> SpeakingUsersInGuild()
 		{
-			return SpeakingUsersInTheGuild(Program.client.GetGuild(voice_channel.GuildId));
+			return SpeakingUsersInTheGuild(client.GetGuild(voice_channel.GuildId));
 		}
 		protected async Task Attract(SocketGuildUser target)
 		{
@@ -85,12 +87,12 @@ namespace discord_bot
 				: ChooseRandom(speaking_users, 2);
 			var new_channel = new SexRoom(await VoiceChannel.Construct(guild, prop => {prop.CategoryId = targets[0].VoiceChannel.CategoryId;prop.UserLimit = 2; }, NAME)) ;
 			await new_channel.Attract(targets);
-			Program.client.UserVoiceStateUpdated += new_channel.DeleteIfEmpty;
+			client.UserVoiceStateUpdated += new_channel.DeleteIfEmpty;
 			return new_channel;
 		}
 		public async override Task Delete()
 		{
-			Program.client.UserVoiceStateUpdated -= DeleteIfEmpty;
+			client.UserVoiceStateUpdated -= DeleteIfEmpty;
 			await base.Delete();
 		}
 	}
@@ -100,6 +102,9 @@ namespace discord_bot
 		private const string NAME = "ブラックホール";
 		protected Blackhole() { }
 		protected Blackhole(VoiceChannel from) { voice_channel = from.voice_channel; }
+
+		[Command("blackhole", RunMode = RunMode.Async)]
+		[Summary("ブラックホールを呼び出します")]
 		public static async Task<Blackhole> Construct(ISocketMessageChannel text_channel, SocketGuild guild ,SocketGuildUser caller)
 		{
 			if (active_blackholes.ContainsKey(guild.Id))
@@ -111,19 +116,19 @@ namespace discord_bot
 			var new_channel = new Blackhole(await VoiceChannel.Construct(guild, prop => { prop.CategoryId = category; }, NAME));
 			active_blackholes.Add(guild.Id, new_channel);
 			await new_channel.Attract(guild.Users.ToList());
-			Program.client.UserVoiceStateUpdated += new_channel.Attract;
+			client.UserVoiceStateUpdated += new_channel.Attract;
 			return new_channel;
 		}
 		public void Disable()
 		{
-			Program.client.UserVoiceStateUpdated -= Attract;
-			Program.client.UserVoiceStateUpdated += DeleteIfEmpty;
+			client.UserVoiceStateUpdated -= Attract;
+			client.UserVoiceStateUpdated += DeleteIfEmpty;
 		}
 	public async override Task Delete()
 		{
 			active_blackholes.Remove(voice_channel.GuildId);
-			Program.client.UserVoiceStateUpdated -= Attract;
-			Program.client.UserVoiceStateUpdated -= DeleteIfEmpty;
+			client.UserVoiceStateUpdated -= Attract;
+			client.UserVoiceStateUpdated -= DeleteIfEmpty;
 			await base.Delete();
 		}
 	}
@@ -142,12 +147,12 @@ namespace discord_bot
 			var new_whitehole = new Whitehole(await VoiceChannel.Construct(guild, prop => { prop.CategoryId = blackhole.voice_channel.CategoryId; }, NAME));
 			blackhole.Disable();
 			await new_whitehole.Attract(guild.Users.ToList());
-			Program.client.UserVoiceStateUpdated += new_whitehole.DeleteIfEmpty;
+			client.UserVoiceStateUpdated += new_whitehole.DeleteIfEmpty;
 			return new_whitehole;
 		}
 		public async override Task Delete()
 		{
-			Program.client.UserVoiceStateUpdated -= DeleteIfEmpty;
+			client.UserVoiceStateUpdated -= DeleteIfEmpty;
 			await base.Delete();
 		}
 	}

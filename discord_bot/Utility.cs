@@ -27,7 +27,7 @@ namespace discord_bot
 		};
 		public static async Task SendError(ISocketMessageChannel channel , Error error)
 		{
-			await channel.SendMessageAsync($"{ ErrorMessage[error] }");
+			await channel?.SendMessageAsync($"{ ErrorMessage[error] }");
 		}
 		public static IList<Type> ChooseRandom<Type>(IList<Type> ronly , uint number = 1)
 		{
