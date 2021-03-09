@@ -14,7 +14,6 @@ namespace discord_bot
 		private static int counter = 0;
 		public static async Task<string> Generate(string text)
 		{
-			//Console.WriteLine("JTalkCalled");
 			int current = counter++;
 
 			string wav_path = Path.Combine( Environment.CurrentDirectory,$"{current}.wav");
@@ -29,7 +28,6 @@ namespace discord_bot
 			process.StandardInput.Write(text);
 			process.StandardInput.Close();
 			await process.WaitForExitAsync();
-			//Console.WriteLine("WAVGenereated");
 			return wav_path;
 
 		}

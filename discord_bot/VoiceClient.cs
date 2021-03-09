@@ -22,7 +22,7 @@ namespace discord_bot
 		internal SocketGuild connected_guild;
 		internal AudioOutStream audio_stream;
 		protected VoiceClient() { }
-		protected VoiceClient(IAudioClient client, SocketGuild guild) { audio_client = client; connected_guild = guild; audio_stream = audio_client.CreatePCMStream(AudioApplication.Music); }
+		protected VoiceClient(IAudioClient client, SocketGuild guild) { audio_client = client; connected_guild = guild; audio_stream = audio_client.CreatePCMStream(AudioApplication.Voice); }
 		public static async Task<VoiceClient> Construct(SocketGuildUser caller, ISocketMessageChannel text_channel = null)
 		{
 			if (!caller.VoiceState.HasValue)
@@ -44,6 +44,7 @@ namespace discord_bot
 		{
 			if (active_voice_clients.TryGetValue(context.Guild.Id, out var client))
 			{
+				await context.Channel.SendMessageAsync($"さようなら");
 				await client.Delete();
 			}
 			else
@@ -63,7 +64,6 @@ namespace discord_bot
 		}
 		protected Process CreateStream(string path)
 		{
-			Console.WriteLine("FFMPEGCalled");
 			return Process.Start(new ProcessStartInfo
 			{
 				FileName = Config.Instance.FFMPEG.PATH ,
@@ -76,15 +76,35 @@ namespace discord_bot
 
 	class Reader : VoiceClient
 	{
-		protected IList<SocketUser> target_list = new List<SocketUser> { };
+		protected IList<IUser> target_list = new List<IUser> { };
+		protected Queue<Stream> queue = new Queue<Stream> { };
+		protected bool is_reading = false;
 		protected Reader() { }
 		protected Reader(VoiceClient from) { audio_client = from.audio_client; connected_guild = from.connected_guild; audio_stream = from.audio_stream; }
 		public static new async Task<Reader> Construct(SocketGuildUser caller, ISocketMessageChannel text_channel = null)
 		{
-			var reader = new Reader(await VoiceClient.Construct(caller, text_channel));
-			reader.target_list.Add(caller);
+			var temp = await VoiceClient.Construct(caller, text_channel);
+			if (temp == null)
+			{
+				if (active_voice_clients.TryGetValue(caller.Guild.Id,out var active_one) && active_one is Reader active_reader )
+				{
+					await active_reader.AddTarget(caller);
+				}
+				else
+				{
+					await SendError(text_channel, Error.FizzedOut);
+				}
+				return null;
+			}
+			var reader = new Reader(temp);
+			await reader.AddTarget(caller);
 			client.MessageReceived += reader.CatchMessage;
 			return reader;
+		}
+		public async Task AddTarget(IUser add , ISocketMessageChannel text_channel = null)
+		{
+			target_list.Add(add);
+			await text_channel.SendMessageAsync($"{add.Mention}の書いたことをしゃべります！");
 		}
 		public async override Task Delete()
 		{
@@ -94,12 +114,25 @@ namespace discord_bot
 		public async Task Read(IUserMessage message)
 		{
 			var wav_path = await JTalk.Generate(message.Content);
-			using var ffmpeg = CreateStream(wav_path);
-			using var output = ffmpeg.StandardOutput.BaseStream;
-			//Console.WriteLine("ReadingStart");
-			try { await output.CopyToAsync(audio_stream); }
-			finally { await audio_stream.FlushAsync(); File.Delete(wav_path); }
-			//Console.WriteLine("ReadingFinished");
+			var output = CreateStream(wav_path).StandardOutput.BaseStream;
+			//File.Delete(wav_path);
+			queue.Enqueue(output);
+			if (is_reading == false)
+			{
+				is_reading = true;
+				while (true)
+				{
+					var lead = queue.Dequeue();
+					await lead.CopyToAsync(audio_stream);
+					await audio_stream.FlushAsync();
+					if (queue.Count == 0)
+					{
+						is_reading = false;
+						break;
+					}
+				}
+			}
+			
 
 		}
 		public Task CatchMessage(SocketMessage message)
