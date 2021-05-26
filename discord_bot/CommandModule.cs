@@ -43,10 +43,18 @@ namespace discord_bot
 
 			var context = new SocketCommandContext(client, message);
 
-			await commands.ExecuteAsync(
+			if ((await commands.ExecuteAsync(
 				context: context,
 				argPos: argPos,
-				services: null);
+				services: null)).IsSuccess
+			)
+			{
+				await context.Message.DeleteAsync();
+			}
+			else
+			{
+				await SendError(messageParam.Channel, Error.UnknownCommand);
+			}
 		}
 
 		[Command("hello", RunMode = RunMode.Async)]
@@ -60,22 +68,19 @@ namespace discord_bot
 		[Summary("ヘルプを表示します")]
 		public async Task ShowHelp()
 		{
-			List<CommandInfo> command_list = commands.Commands.ToList();
-			EmbedBuilder embedBuilder = new();
-
-			foreach (CommandInfo command in command_list)
+			EmbedBuilder embedBuilder = new();	
+			foreach (CommandInfo command in commands.Commands)
 			{
 				string embedFieldText = command.Summary ?? "説明不要！\n";
-				embedBuilder.AddField(command.Name, embedFieldText);
+				string Header = $"{PREFIX}{command.Name}";
+				foreach( var param in command.Parameters)
+				{
+					Header += $" [{param.Summary}]";
+				}
+				embedBuilder.AddField(Header, embedFieldText);
 			}
-			await ReplyAsync($"\"{PREFIX}\"か{client.CurrentUser.Mention}を頭に付けて呼び出します！ 例: !hello", false, embedBuilder.Build());
-		}
-
-		[Command("detailedhelp", RunMode = RunMode.Async)]
-		[Summary("詳細なヘルプを表示します")]
-		public async Task ShowDetailedHelp()
-		{
-			await SendError(Context.Channel, Error.CommandUndefined);
+			embedBuilder.WithColor(Color.Green);
+			await ReplyAsync($"\"{PREFIX}\"の代わりに{client.CurrentUser.Mention}でも呼び出せます！", false, embedBuilder.Build());
 		}
 
 		[Command("summon", RunMode = RunMode.Async)]
@@ -93,20 +98,55 @@ namespace discord_bot
 
 		}
 
+		[Command("summon", RunMode = RunMode.Async)]
+		[Summary("ターゲットを召喚！")]
+		public async Task Summon([Summary("target")]string mention)
+		{
+			if (MentionUtils.TryParseUser(mention,out var _))
+			{
+				await Context.Channel.SendMessageAsync($"༽୧༺ ‡۞卍✞༒ {mention} ༒✞卍۞‡༻୨༼");
+			}
+			else
+			{
+				await SendError(Context.Channel, Error.UserNotFound);
+			}
+		}
+
 		private static readonly int ROLL_MIN_DEFAULT = 1;
 		private static readonly int ROLL_MAX_DEFAULT = 100;
 		[Command("roll", RunMode = RunMode.Async)]
 		[Summary("100面ダイスを振ります")]
 		public async Task Roll()
 		{
-			await Context.Channel.SendMessageAsync($"{Context.User.Mention} が{ROLL_MAX_DEFAULT}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, ROLL_MAX_DEFAULT + 1)}！");
+			await Context.Channel.SendMessageAsync($"{Context.User.Mention}が{ROLL_MAX_DEFAULT}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, ROLL_MAX_DEFAULT + 1)}！");
+		}
+		[Command("roll", RunMode = RunMode.Async)]
+		[Summary("X面ダイスを振ります")]
+		public async Task Roll([Summary("X")] int max)
+		{
+			if (max <= 0)
+			{
+				await SendError(Context.Channel, Error.SomethingIsWrong);
+				return;
+			}
+			await Context.Channel.SendMessageAsync($"{Context.User.Mention}が{max}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, max + 1)}！");
+		}
+		[Command("roll", RunMode = RunMode.Async)]
+		[Summary("指定された範囲の数字を一つ選びます")]
+		public async Task Roll([Summary("min")] int min ,[Summary("max")] int max)
+		{
+			if (min > max)
+			{
+				Swap(ref min,ref max);
+			}
+			await Context.Channel.SendMessageAsync($"{Context.User.Mention}の為に{min}から{max}までの数字を一つ選んだ...{new Random().Next(min, max + 1)}！");
 		}
 
 		[Command("flip", RunMode = RunMode.Async)]
 		[Summary("コインを投げます")]
 		public async Task Flip()
 		{
-			await Context.Channel.SendMessageAsync($"{Context.User.Mention} がコインを投げた...{(new Random().Next(0, 2) == 0 ? "表" : "裏")}！");
+			await Context.Channel.SendMessageAsync($"{Context.User.Mention}がコインを投げた...{(new Random().Next(0, 2) == 0 ? "表" : "裏")}！");
 		}
 
 		[Command("mute", RunMode = RunMode.Async)]
@@ -179,6 +219,18 @@ namespace discord_bot
 		public async Task SpeakingClientDisconnect()
 		{
 			await VoiceClient.Bye(Context);
+		}
+		[Command("reset", RunMode = RunMode.Async)]
+		[Summary("Watchinpoが喋らなくなった時に押してください")]
+		public async Task SpeakerReset()
+		{
+			await VoiceClient.Reset(Context);
+		}
+		[Command("enigma", RunMode = RunMode.Async)]
+		[Summary("saryo氏")]
+		public async Task SaryoLeadingTeamtoWIn()
+		{
+			await Context.Channel.SendMessageAsync($"https://www.youtube.com/watch?v=ZYKn9C25oQ4");
 		}
 	}
 }

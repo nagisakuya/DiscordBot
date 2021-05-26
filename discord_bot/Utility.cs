@@ -16,6 +16,7 @@ namespace discord_bot
 			UnknownCommand,
 			NotEnoughUsers,
 			FizzedOut,
+			SomethingIsWrong,
 		}
 		public static readonly Dictionary<Error, string> ErrorMessage = new()
 		{
@@ -24,6 +25,7 @@ namespace discord_bot
 			{ Error.UnknownCommand, $"すみません、上手く聞き取れませんでした" },
 			{ Error.NotEnoughUsers, $"*しかし誰も来なかった" },
 			{ Error.FizzedOut, $"しかし なにも おこらなかった！" },
+			{ Error.SomethingIsWrong, $"先生、何もしていないのに壊れました！" },
 		};
 		public static async Task SendError(ISocketMessageChannel channel , Error error)
 		{
@@ -48,6 +50,9 @@ namespace discord_bot
 		public static IList<SocketGuildUser> SpeakingUsersInTheGuild(SocketGuild guild)
 		{
 			return guild.Users.Where(user => user.VoiceState.HasValue).ToList();
+		}
+		public static void Swap<Type>(ref Type a ,ref Type b){
+			(a, b) = (b, a);
 		}
 	}
 }

@@ -102,9 +102,6 @@ namespace discord_bot
 		private const string NAME = "ブラックホール";
 		protected Blackhole() { }
 		protected Blackhole(VoiceChannel from) { voice_channel = from.voice_channel; }
-
-		[Command("blackhole", RunMode = RunMode.Async)]
-		[Summary("ブラックホールを呼び出します")]
 		public static async Task<Blackhole> Construct(ISocketMessageChannel text_channel, SocketGuild guild ,SocketGuildUser caller)
 		{
 			if (active_blackholes.ContainsKey(guild.Id))
