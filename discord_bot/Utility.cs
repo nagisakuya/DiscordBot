@@ -31,15 +31,21 @@ namespace discord_bot
 		{
 			await channel?.SendMessageAsync($"{ ErrorMessage[error] }");
 		}
-		public static async Task SendDisapperMessage(this ISocketMessageChannel channel, string text)
+		public static Task SendDisapperMessage(this ISocketMessageChannel channel, string text)
 		{
 			int DISAPPER_TIME = 60 * 1000;
-			if (channel != null)
+			//awaitしちゃうとなぜか動かない
+			_ = Task.Run(()=>
 			{
-				var mes = await channel.SendMessageAsync(text);
-				await Task.Delay(DISAPPER_TIME);
-				await mes.DeleteAsync();
-			}
+				if (channel != null)
+				{
+					var mes = channel.SendMessageAsync(text);
+					mes.Wait();
+					Task.Delay(DISAPPER_TIME).Wait();
+					mes.Result.DeleteAsync();
+				}
+			});
+			return Task.CompletedTask;
 		}
 		public static IList<Type> ChooseRandom<Type>(IList<Type> ronly, uint number = 1)
 		{
