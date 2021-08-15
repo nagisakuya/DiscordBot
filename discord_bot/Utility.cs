@@ -29,11 +29,10 @@ namespace discord_bot
 		};
 		public static async Task SendError(ISocketMessageChannel channel, Error error)
 		{
-			await channel?.SendMessageAsync($"{ ErrorMessage[error] }");
+			await channel?.SendDisapperMessage($"{ ErrorMessage[error] }");
 		}
-		public static Task SendDisapperMessage(this ISocketMessageChannel channel, string text)
+		public static Task SendDisapperMessage(this ISocketMessageChannel channel, string text,int disapper_sec = 60)
 		{
-			int DISAPPER_TIME = 60 * 1000;
 			//awaitしちゃうとなぜか動かない
 			_ = Task.Run(()=>
 			{
@@ -41,7 +40,7 @@ namespace discord_bot
 				{
 					var mes = channel.SendMessageAsync(text);
 					mes.Wait();
-					Task.Delay(DISAPPER_TIME).Wait();
+					Task.Delay(disapper_sec*1000).Wait();
 					mes.Result.DeleteAsync();
 				}
 			});

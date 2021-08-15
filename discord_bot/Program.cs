@@ -85,9 +85,9 @@ namespace discord_bot
 				//message.DeleteAsync();
 			}
 		}
-		private static async Task DeleteMention(SocketMessage messageParam)
+		private static Task DeleteMention(SocketMessage messageParam)
 		{
-			if (messageParam is SocketUserMessage message && message.MentionedUsers.Count == 1)
+			if (messageParam is SocketUserMessage message && !message.Author.IsBot && MentionUtils.TryParseUser(message.Content, out var target_id))
 			{
 				client.UserVoiceStateUpdated += (user,before,after) =>
 				{
@@ -101,6 +101,7 @@ namespace discord_bot
 					return Task.CompletedTask;
 				};
 			}
+			return Task.CompletedTask;
 		}
 		private static Task Log(LogMessage message)
 		{

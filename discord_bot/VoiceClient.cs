@@ -24,7 +24,7 @@ namespace discord_bot
 		internal AudioOutStream audio_stream;
 		protected Queue<Stream> queue = new() { };
 		protected bool is_playing = false;
-		internal int living_ffmpeg_counter = 0;
+		internal static int living_ffmpeg_counter = 0;
 		protected VoiceClient() { }
 		protected VoiceClient(IAudioClient client, SocketGuild guild) { audio_client = client; connected_guild = guild; audio_stream = audio_client.CreatePCMStream(AudioApplication.Voice); }
 		public static async Task<VoiceClient> Construct(SocketGuildUser caller, ISocketMessageChannel text_channel = null)
@@ -61,7 +61,7 @@ namespace discord_bot
 			if (active_voice_clients.TryGetValue(context.Guild.Id, out var client))
 			{
 				if (message_flag)
-					await context.Channel.SendDisapperMessage($"再起動します...\nデバッグ情報:queue={client.queue.Count} playing={client.is_playing} living_process={client.living_ffmpeg_counter}");
+					await context.Channel.SendDisapperMessage($"再起動します...\nデバッグ情報:queue={client.queue.Count} playing={client.is_playing} living_process={living_ffmpeg_counter}");
 				client.queue.Clear();
 				client.is_playing = false;
 			}
@@ -95,7 +95,7 @@ namespace discord_bot
 				}
 			}
 			process.WaitForExit(10000);
-			//process.Kill();
+			process.Kill();
 			if (!process.HasExited)
 			{
 				living_ffmpeg_counter++;
@@ -166,9 +166,12 @@ namespace discord_bot
 				double speed = text.Length > TEXT_LENGTH_LIMIT ? read_speed * text.Length / TEXT_LENGTH_LIMIT : read_speed;
 				Task.Run(() =>
 				{
-					_ = Play(JTalk.Generate(text, speed).Result);
+					string wav_path = JTalk.Generate(text, speed).Result;
+					var task = Play(wav_path);
 					Task.Delay(DELETE_TIME).Wait();
+					task.Wait();
 					message.DeleteAsync();
+					File.Delete(wav_path);
 				});
 			}
 			return Task.CompletedTask;
