@@ -61,7 +61,7 @@ namespace discord_bot
 		[Summary("挨拶します")]
 		public async Task SayHello()
 		{
-			await Context.Channel.SendMessageAsync($"こんにちは！🦀 {client.CurrentUser.Username}です！\"{PREFIX}help\" で使い方を確認できます！");
+			await Context.Channel.SendDisapperMessage($"こんにちは！🦀 {client.CurrentUser.Username}です！\"{PREFIX}help\" で使い方を確認できます！");
 		}
 
 		[Command("help", RunMode = RunMode.Async)]
@@ -89,7 +89,7 @@ namespace discord_bot
 		{
 			if (client.GetUser(SARYO_ID) is SocketUser saryo)
 			{
-				await Context.Channel.SendMessageAsync($"༽୧༺ ‡۞卍✞༒ {saryo.Mention} ༒✞卍۞‡༻୨༼");
+				await Context.Channel.SendDisapperMessage($"༽୧༺ ‡۞卍✞༒ {saryo.Mention} ༒✞卍۞‡༻୨༼");
 			}
 			else
 			{
@@ -104,7 +104,7 @@ namespace discord_bot
 		{
 			if (MentionUtils.TryParseUser(mention,out var _))
 			{
-				await Context.Channel.SendMessageAsync($"༽୧༺ ‡۞卍✞༒ {mention} ༒✞卍۞‡༻୨༼");
+				await Context.Channel.SendDisapperMessage($"༽୧༺ ‡۞卍✞༒ {mention} ༒✞卍۞‡༻୨༼");
 			}
 			else
 			{
@@ -118,7 +118,7 @@ namespace discord_bot
 		[Summary("100面ダイスを振ります")]
 		public async Task Roll()
 		{
-			await Context.Channel.SendMessageAsync($"{Context.User.Mention}が{ROLL_MAX_DEFAULT}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, ROLL_MAX_DEFAULT + 1)}！");
+			await Context.Channel.SendDisapperMessage($"{Context.User.Mention}が{ROLL_MAX_DEFAULT}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, ROLL_MAX_DEFAULT + 1)}！");
 		}
 		[Command("roll", RunMode = RunMode.Async)]
 		[Summary("X面ダイスを振ります")]
@@ -129,7 +129,7 @@ namespace discord_bot
 				await SendError(Context.Channel, Error.SomethingIsWrong);
 				return;
 			}
-			await Context.Channel.SendMessageAsync($"{Context.User.Mention}が{max}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, max + 1)}！");
+			await Context.Channel.SendDisapperMessage($"{Context.User.Mention}が{max}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, max + 1)}！");
 		}
 		[Command("roll", RunMode = RunMode.Async)]
 		[Summary("指定された範囲の数字を一つ選びます")]
@@ -139,14 +139,14 @@ namespace discord_bot
 			{
 				Swap(ref min,ref max);
 			}
-			await Context.Channel.SendMessageAsync($"{Context.User.Mention}の為に{min}から{max}までの数字を一つ選んだ...{new Random().Next(min, max + 1)}！");
+			await Context.Channel.SendDisapperMessage($"{Context.User.Mention}の為に{min}から{max}までの数字を一つ選んだ...{new Random().Next(min, max + 1)}！");
 		}
 
 		[Command("flip", RunMode = RunMode.Async)]
 		[Summary("コインを投げます")]
 		public async Task Flip()
 		{
-			await Context.Channel.SendMessageAsync($"{Context.User.Mention}がコインを投げた...{(new Random().Next(0, 2) == 0 ? "表" : "裏")}！");
+			await Context.Channel.SendDisapperMessage($"{Context.User.Mention}がコインを投げた...{(new Random().Next(0, 2) == 0 ? "表" : "裏")}！");
 		}
 
 		[Command("mute", RunMode = RunMode.Async)]
@@ -159,7 +159,7 @@ namespace discord_bot
 				return;
 			}
 			await watching.ModifyAsync((target) => target.Mute = true);
-			await Context.Channel.SendMessageAsync("(ファミチキください)");
+			await Context.Channel.SendDisapperMessage("(ファミチキください)");
 		}
 
 		[Command("unmute", RunMode = RunMode.Async)]
@@ -172,7 +172,7 @@ namespace discord_bot
 				return;
 			}
 			await watching.ModifyAsync((target) => target.Mute = false);
-			await Context.Channel.SendMessageAsync("封印解除！");
+			await Context.Channel.SendDisapperMessage("封印解除！");
 		}
 
 		[Command("sex", RunMode = RunMode.Async)]
@@ -230,7 +230,7 @@ namespace discord_bot
 		[Summary("saryo氏")]
 		public async Task SaryoLeadingTeamtoWIn()
 		{
-			await Context.Channel.SendMessageAsync($"https://www.youtube.com/watch?v=ZYKn9C25oQ4");
+			await Context.Channel.SendDisapperMessage($"https://www.youtube.com/watch?v=ZYKn9C25oQ4");
 		}
 	}
 }

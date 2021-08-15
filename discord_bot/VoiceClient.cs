@@ -12,6 +12,7 @@ using System.Diagnostics;
 using System.IO;
 using static discord_bot.Utility;
 using static discord_bot.Program;
+using System.Text.RegularExpressions;
 
 namespace discord_bot
 {
@@ -23,6 +24,7 @@ namespace discord_bot
 		internal AudioOutStream audio_stream;
 		protected Queue<Stream> queue = new() { };
 		protected bool is_playing = false;
+		internal int living_ffmpeg_counter = 0;
 		protected VoiceClient() { }
 		protected VoiceClient(IAudioClient client, SocketGuild guild) { audio_client = client; connected_guild = guild; audio_stream = audio_client.CreatePCMStream(AudioApplication.Voice); }
 		public static async Task<VoiceClient> Construct(SocketGuildUser caller, ISocketMessageChannel text_channel = null)
@@ -46,7 +48,7 @@ namespace discord_bot
 		{
 			if (active_voice_clients.TryGetValue(context.Guild.Id, out var client))
 			{
-				await context.Channel.SendMessageAsync($"さようなら");
+				await context.Channel.SendDisapperMessage($"さようなら");
 				await client.Delete();
 			}
 			else
@@ -54,12 +56,12 @@ namespace discord_bot
 				await SendError(context.Channel, Error.FizzedOut);
 			}
 		}
-		public static async Task Reset(SocketCommandContext context , bool message_flag = true)
+		public static async Task Reset(SocketCommandContext context, bool message_flag = true)
 		{
 			if (active_voice_clients.TryGetValue(context.Guild.Id, out var client))
 			{
-				if(message_flag) 
-					await context.Channel.SendMessageAsync($"再起動します...\nデバッグ情報:queue={client.queue.Count} playing={client.is_playing}");
+				if (message_flag)
+					await context.Channel.SendDisapperMessage($"再起動します...\nデバッグ情報:queue={client.queue.Count} playing={client.is_playing} living_process={client.living_ffmpeg_counter}");
 				client.queue.Clear();
 				client.is_playing = false;
 			}
@@ -78,7 +80,6 @@ namespace discord_bot
 				RedirectStandardOutput = true,
 			});
 			queue.Enqueue(process.StandardOutput.BaseStream);
-			process.Close();
 			if (is_playing == false)
 			{
 				is_playing = true;
@@ -92,6 +93,12 @@ namespace discord_bot
 						break;
 					}
 				}
+			}
+			process.WaitForExit(10000);
+			//process.Kill();
+			if (!process.HasExited)
+			{
+				living_ffmpeg_counter++;
 			}
 		}
 		public void Delete(object sender, ConsoleCancelEventArgs args)
@@ -112,6 +119,7 @@ namespace discord_bot
 		const double DEFAULT_READ_SPEED = 0.8;
 		double read_speed = DEFAULT_READ_SPEED;
 		const int TEXT_LENGTH_LIMIT = 30;
+		const int DELETE_TIME = 60 * 1000;
 		protected IList<IUser> target_list = new List<IUser> { };
 		protected Reader() { }
 		protected Reader(VoiceClient from) { audio_client = from.audio_client; connected_guild = from.connected_guild; audio_stream = from.audio_stream; }
@@ -133,40 +141,16 @@ namespace discord_bot
 		}
 		public static string Format(string str)
 		{
-			if (str.Contains("http://") || str.Contains("https://"))
-			{
-				return "URL";
-			}
-			for (int i = 0; i < GRASS_LIMIT; i++)
-			{
-				var temp = str.IndexOf("Ｗ");
-				if (temp != -1)
-				{
-					str = str.Remove(temp,1);
-					str = str.Insert(temp, "わら");
-				}
-				else {
-					temp = str.IndexOf("ｗ");
-					if (temp != -1)
-					{
-						str = str.Remove(temp,1);
-						str = str.Insert(temp, "わら");
-					}
-					else
-					{
-						break;
-					}
-
-				}
-			}
-			str = str.Replace("Ｗ", "");
-			str = str.Replace("ｗ", "");
+			str = Regex.Replace(str, "(http://|https://)[^ ]+", "URL");
+			str = Regex.Replace(str, "<@.?[0-9]{18}>", "");
+			str = Regex.Replace(str, "[ｗ]{" + GRASS_LIMIT + ",}", string.Concat(Enumerable.Repeat("わら", GRASS_LIMIT)));
+			str = str.Replace("ｗ", "わら");
 			return str;
 		}
 		public async Task AddTarget(IUser add, ISocketMessageChannel text_channel = null)
 		{
 			target_list.Add(add);
-			await text_channel?.SendMessageAsync($"{add.Mention}の書いたことをしゃべります！");
+			await text_channel?.SendDisapperMessage($"{add.Mention}の書いたことをしゃべります！");
 		}
 		public async override Task Delete()
 		{
@@ -176,11 +160,16 @@ namespace discord_bot
 
 		public Task CatchMessage(SocketMessage message)
 		{
-			if (message is SocketUserMessage user_message && target_list.Contains(user_message.Author) && !CommandModule.IsCommand(user_message))
+			if (message is SocketUserMessage user_message && target_list.Contains(user_message.Author) && !CommandModule.IsCommand(user_message) && user_message.MentionedUsers.Count == 0)
 			{
 				string text = Format(message.Content);
 				double speed = text.Length > TEXT_LENGTH_LIMIT ? read_speed * text.Length / TEXT_LENGTH_LIMIT : read_speed;
-				Task.Run(() => Play(JTalk.Generate(text, speed).Result));
+				Task.Run(() =>
+				{
+					_ = Play(JTalk.Generate(text, speed).Result);
+					Task.Delay(DELETE_TIME).Wait();
+					message.DeleteAsync();
+				});
 			}
 			return Task.CompletedTask;
 		}

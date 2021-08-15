@@ -27,11 +27,21 @@ namespace discord_bot
 			{ Error.FizzedOut, $"しかし なにも おこらなかった！" },
 			{ Error.SomethingIsWrong, $"先生、何もしていないのに壊れました！" },
 		};
-		public static async Task SendError(ISocketMessageChannel channel , Error error)
+		public static async Task SendError(ISocketMessageChannel channel, Error error)
 		{
 			await channel?.SendMessageAsync($"{ ErrorMessage[error] }");
 		}
-		public static IList<Type> ChooseRandom<Type>(IList<Type> ronly , uint number = 1)
+		public static async Task SendDisapperMessage(this ISocketMessageChannel channel, string text)
+		{
+			int DISAPPER_TIME = 60 * 1000;
+			if (channel != null)
+			{
+				var mes = await channel.SendMessageAsync(text);
+				await Task.Delay(DISAPPER_TIME);
+				await mes.DeleteAsync();
+			}
+		}
+		public static IList<Type> ChooseRandom<Type>(IList<Type> ronly, uint number = 1)
 		{
 			/*if (from.Count > number)
 			{
@@ -51,7 +61,8 @@ namespace discord_bot
 		{
 			return guild.Users.Where(user => user.VoiceState.HasValue).ToList();
 		}
-		public static void Swap<Type>(ref Type a ,ref Type b){
+		public static void Swap<Type>(ref Type a, ref Type b)
+		{
 			(a, b) = (b, a);
 		}
 	}

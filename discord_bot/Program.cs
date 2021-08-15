@@ -63,7 +63,8 @@ namespace discord_bot
 			});
 			client.Log += Log;
 			client.MessageReceived += LogMessage;
-			client.MessageReceived += ReplaceToSummon;
+			//client.MessageReceived += ReplaceToSummon;
+			client.MessageReceived += DeleteMention;
 			CommandModule command_module = new();
 			await command_module.InstallCommandsAsync();
 			await client.LoginAsync(TokenType.Bot, Config.Instance.DISCORD.TOKEN);
@@ -75,18 +76,31 @@ namespace discord_bot
 			Console.WriteLine("{0} {1} {2}:{3}", DateTime.Now.ToLongTimeString(), message.Channel.Name, message.Author.Username, message.Content);
 			return Task.CompletedTask;
 		}
-		private static Task ReplaceToSummon(SocketMessage messageParam)
+		private static async Task ReplaceToSummon(SocketMessage messageParam)
 		{
 			if (messageParam is SocketUserMessage message && MentionUtils.TryParseUser(message.Content, out var target_id))
 			{
-				Task.Run(() =>
-				{
-					//message.ModifyAsync(m=>m.Content = $"༽୧༺ ‡۞卍✞༒ {message.Content} ༒✞卍۞‡༻୨༼");
-					message.Channel.SendMessageAsync($"༽୧༺ ‡۞卍✞༒ {client.GetUser(target_id).Username} ༒✞卍۞‡༻୨༼");
-					//message.DeleteAsync();
-				});
+				//message.ModifyAsync(m=>m.Content = $"༽୧༺ ‡۞卍✞༒ {message.Content} ༒✞卍۞‡༻୨༼");
+				await message.Channel.SendDisapperMessage($"༽୧༺ ‡۞卍✞༒ {client.GetUser(target_id).Username} ༒✞卍۞‡༻୨༼");
+				//message.DeleteAsync();
 			}
-			return Task.CompletedTask;
+		}
+		private static async Task DeleteMention(SocketMessage messageParam)
+		{
+			if (messageParam is SocketUserMessage message && message.MentionedUsers.Count == 1)
+			{
+				client.UserVoiceStateUpdated += (user,before,after) =>
+				{
+					Task.Run(() =>
+					{
+						if (user.Id == message.MentionedUsers.First().Id)
+						{
+							message.DeleteAsync();
+						}
+					});
+					return Task.CompletedTask;
+				};
+			}
 		}
 		private static Task Log(LogMessage message)
 		{
