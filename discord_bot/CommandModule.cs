@@ -217,7 +217,7 @@ namespace discord_bot
 		}
 
 		[Command("whitehole", RunMode = RunMode.Async)]
-		[Summary("最後の手段->ブラックホールに突入する")]
+		[Summary("最後の手段=>ブラックホールに突入する")]
 		public Task CreateWhitehole()
 		{
 			if (Context.Channel is SocketGuildChannel channel)
@@ -235,7 +235,7 @@ namespace discord_bot
 			{
 				if (Reader.TryFind(Context.Guild, out var reader))
 				{
-					reader.AddTarget(caller);
+					reader.AddTarget(caller,Context.Channel);
 				}
 				else
 				{
@@ -252,7 +252,7 @@ namespace discord_bot
 			{
 				if (Reader.TryFind(Context.Guild, out var reader))
 				{
-					reader.RemoveTarget(caller);
+					reader.RemoveTarget(caller, Context.Channel);
 				}
 				else
 				{
@@ -281,7 +281,7 @@ namespace discord_bot
 		{
 			if (VoiceClient.TryFind(Context.Guild, out var voice_client))
 			{
-				var info = voice_client.debug_info;
+				var info = voice_client.DebugInfo;
 				_ = Context.Channel.SendDisapperMessage("再起動します…");
 				voice_client.Reset();
 				_ = Context.Channel.SendDisapperMessage($"デバッグ情報:queue={info.queue_count} playing={info.is_playing} living_process={info.living_ffmpeg}");

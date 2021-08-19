@@ -23,19 +23,14 @@ namespace discord_bot
 		private IAudioClient audio_client;
 		private AudioOutStream audio_stream;
 		private Queue<Stream> queue = new() { };
-		private bool playing = false;
+		private Task last_play_task = Task.CompletedTask;
 		private static int living_ffmpeg_counter = 0;
-		public (int queue_count, bool is_playing, int living_ffmpeg) debug_info
-		{
-			get
-			{
-				return (queue.Count, playing, living_ffmpeg_counter);
-			}
-		}
+		public (int queue_count, bool is_playing, int living_ffmpeg) DebugInfo => (queue.Count, last_play_task.IsCompleted, living_ffmpeg_counter);
 		public VoiceClient(SocketVoiceChannel channel, ISocketMessageChannel text_channel = null)
 		{
-			Task.Run(()=>{
-				if (channel == null )
+			Task.Run(() =>
+			{
+				if (channel == null)
 				{
 					_ = text_channel.SendError(Error.FizzedOut);
 				}
@@ -55,9 +50,9 @@ namespace discord_bot
 		public void Reset()
 		{
 			queue.Clear();
-			playing = false;
+			last_play_task = Task.CompletedTask;
 		}
-		public async Task Play(string wav_path)
+		public Task Play(string wav_path)
 		{
 			var process = Process.Start(new ProcessStartInfo
 			{
@@ -66,27 +61,14 @@ namespace discord_bot
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
 			});
-			queue.Enqueue(process.StandardOutput.BaseStream);
-			if (playing == false)
+			var stream = process.StandardOutput.BaseStream;
+			var task_for_wait = last_play_task;
+			return last_play_task = Task.Run(async () =>
 			{
-				playing = true;
-				while (true)
-				{
-					var queue_first = queue.Dequeue();
-					await queue_first.CopyToAsync(audio_stream);
-					if (queue.Count == 0)
-					{
-						playing = false;
-						break;
-					}
-				}
-			}
-			process.WaitForExit(10000);
-			process.Kill();
-			if (!process.HasExited)
-			{
-				living_ffmpeg_counter++;
-			}
+				task_for_wait.Wait();
+				await stream.CopyToAsync(audio_stream);
+				process.Kill();
+			});
 		}
 		public async virtual Task Disconnect()
 		{
@@ -98,7 +80,7 @@ namespace discord_bot
 			return active_voice_clients.TryGetValue(guild.Id, out var client) ?
 				client : null;
 		}
-		public static bool TryFind(IGuild guild,out VoiceClient voice_client)
+		public static bool TryFind(IGuild guild, out VoiceClient voice_client)
 		{
 			return active_voice_clients.TryGetValue(guild.Id, out voice_client);
 		}
@@ -180,7 +162,7 @@ namespace discord_bot
 		public static bool TryFind(IGuild guild, out Reader reader)
 		{
 			reader = Find(guild);
-			return reader != null ? true : false;
+			return reader != null;
 		}
 	}
 }
