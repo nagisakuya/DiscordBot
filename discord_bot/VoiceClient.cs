@@ -92,17 +92,23 @@ namespace discord_bot
 		const double DEFAULT_READ_SPEED = 0.8;
 		double read_speed = DEFAULT_READ_SPEED;
 		const int TEXT_LENGTH_LIMIT = 30;
-		const int DELETE_TIME = 60 * 1000;
+		const int DELETE_TIME = 30 * 60 * 1000;
+		readonly static Regex URL_PATTERN = new("(http://|https://)[^ ]+");
+		readonly static Regex MENTION_PATTERN = new("<@.?[0-9]{18}>");
 		private IList<IUser> target_list = new List<IUser> { };
 		public Reader(SocketGuildUser caller, ISocketMessageChannel text_channel = null) : base(caller.VoiceChannel, text_channel)
 		{
 			AddTarget(caller, text_channel);
 			client.MessageReceived += CatchMessage;
 		}
-		public static string Format(string str)
+		public static string Format(SocketMessage message)
 		{
-			str = Regex.Replace(str, "(http://|https://)[^ ]+", "URL");
-			str = Regex.Replace(str, "<@.?[0-9]{18}>", "");
+			var str = message.Content;
+			foreach (var user in message.MentionedUsers)
+			{
+				str = MENTION_PATTERN.Replace(str, "@" + user.Username, 1);
+			}
+			str = URL_PATTERN.Replace(str, "");
 			str = Regex.Replace(str, "[ｗ]{" + GRASS_LIMIT + ",}", string.Concat(Enumerable.Repeat("わら", GRASS_LIMIT)));
 			str = str.Replace("ｗ", "わら");
 			return str;
@@ -135,21 +141,36 @@ namespace discord_bot
 			client.MessageReceived -= CatchMessage;
 			await base.Disconnect();
 		}
+		private static bool HasNoMention(IMessage message)
+		{
+			return message.MentionedUserIds.Count == 0
+				&& message.MentionedRoleIds.Count == 0
+				&& !message.MentionedEveryone
+				&& message.MentionedChannelIds.Count == 0;
+		}
+		private static int URLCount(IMessage message)
+		{
+			return URL_PATTERN.Match(message.Content).Captures.Count;
+		}
 		public Task CatchMessage(SocketMessage message)
 		{
-			Task.Run(() =>
+			Task.Run(async () =>
 			{
-				if (message is SocketUserMessage user_message && target_list.Contains(user_message.Author) && !CommandModule.IsCommand(user_message) && user_message.MentionedUsers.Count == 0)
+				if (message is SocketUserMessage user_message && target_list.Contains(user_message.Author) && !CommandModule.IsCommand(user_message))
 				{
 					Console.WriteLine("that message is caught by reader");
-					string text = Format(message.Content);
+					string text = Format(message);
+					if (text.Length == 0) return;
 					double speed = text.Length > TEXT_LENGTH_LIMIT ? read_speed * text.Length / TEXT_LENGTH_LIMIT : read_speed;
-					string wav_path = JTalk.Generate(text, speed).Result;
-					var task = Play(wav_path);
-					Task.Delay(DELETE_TIME).Wait();
-					task.Wait();
-					message.DeleteAsync();
-					File.Delete(wav_path);
+					string wav_path = await JTalk.Generate(text, speed);
+					await Play(wav_path);
+					if (URLCount(message) == 0 && message.Attachments.Count == 0 && HasNoMention(message))
+					{
+						Console.WriteLine("that message will delete by reader");
+						await Task.Delay(DELETE_TIME);
+						_ = message.DeleteAsync();
+						File.Delete(wav_path);
+					}
 				}
 			});
 			return Task.CompletedTask;
