@@ -95,6 +95,7 @@ namespace discord_bot
 					{
 						if (user.Id == message.MentionedUsers.First().Id)
 						{
+							Task.Delay(60 * 1000).Wait();
 							message.DeleteAsync();
 						}
 					});

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Discord;
 using Discord.WebSocket;
 
 namespace discord_bot
@@ -27,24 +28,19 @@ namespace discord_bot
 			{ Error.FizzedOut, $"しかし なにも おこらなかった！" },
 			{ Error.SomethingIsWrong, $"先生、何もしていないのに壊れました！" },
 		};
-		public static async Task SendError(ISocketMessageChannel channel, Error error)
+		public static async Task SendError(this ISocketMessageChannel channel, Error error)
 		{
 			await channel?.SendDisapperMessage($"{ ErrorMessage[error] }");
 		}
-		public static Task SendDisapperMessage(this ISocketMessageChannel channel, string text,int disapper_sec = 60)
+		public static async Task SendDisapperMessage(this ISocketMessageChannel channel, string text, int disapper_sec = 60, Embed embed = null)
 		{
-			//awaitしちゃうとなぜか動かない
-			_ = Task.Run(()=>
+			if (channel != null)
 			{
-				if (channel != null)
-				{
-					var mes = channel.SendMessageAsync(text);
-					mes.Wait();
-					Task.Delay(disapper_sec*1000).Wait();
-					mes.Result.DeleteAsync();
-				}
-			});
-			return Task.CompletedTask;
+				var mes = await channel.SendMessageAsync(text: text, embed: embed);
+				await Task.Delay(disapper_sec * 1000);
+				await mes.DeleteAsync();
+			}
+
 		}
 		public static IList<Type> ChooseRandom<Type>(IList<Type> ronly, uint number = 1)
 		{

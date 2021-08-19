@@ -13,7 +13,7 @@ using static discord_bot.Program;
 
 namespace discord_bot
 {
-	
+
 	public class CommandModule : ModuleBase<SocketCommandContext>
 	{
 		private static readonly char PREFIX = '!';
@@ -22,7 +22,7 @@ namespace discord_bot
 		public async Task InstallCommandsAsync()
 		{
 			client.MessageReceived += HandleCommandAsync;
-			await commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(),services: null);
+			await commands.AddModulesAsync(assembly: Assembly.GetEntryAssembly(), services: null);
 		}
 		public static bool IsCommand(IUserMessage message)
 		{
@@ -53,184 +53,228 @@ namespace discord_bot
 			}
 			else
 			{
-				await SendError(messageParam.Channel, Error.UnknownCommand);
+				_ = messageParam.Channel.SendError(Error.UnknownCommand);
 			}
 		}
 
 		[Command("hello", RunMode = RunMode.Async)]
 		[Summary("挨拶します")]
-		public async Task SayHello()
+		public Task SayHello()
 		{
-			await Context.Channel.SendDisapperMessage($"こんにちは！🦀 {client.CurrentUser.Username}です！\"{PREFIX}help\" で使い方を確認できます！");
+			_ = Context.Channel.SendDisapperMessage($"こんにちは！{client.CurrentUser.Username}です！\"{PREFIX}help\" で使い方を確認できます！");
+			return Task.CompletedTask;
 		}
 
 		[Command("help", RunMode = RunMode.Async)]
 		[Summary("ヘルプを表示します")]
-		public async Task ShowHelp()
+		public Task ShowHelp()
 		{
-			EmbedBuilder embedBuilder = new();	
+			EmbedBuilder embedBuilder = new();
 			foreach (CommandInfo command in commands.Commands)
 			{
 				string embedFieldText = command.Summary ?? "説明不要！\n";
 				string Header = $"{PREFIX}{command.Name}";
-				foreach( var param in command.Parameters)
+				foreach (var param in command.Parameters)
 				{
 					Header += $" [{param.Summary}]";
 				}
 				embedBuilder.AddField(Header, embedFieldText);
 			}
 			embedBuilder.WithColor(Color.Green);
-			await ReplyAsync($"\"{PREFIX}\"の代わりに{client.CurrentUser.Mention}でも呼び出せます！", false, embedBuilder.Build());
+			_ = Context.Channel.SendDisapperMessage(text: $"\"{PREFIX}\"の代わりに{client.CurrentUser.Mention}でも呼び出せます！", embed: embedBuilder.Build());
+			return Task.CompletedTask;
 		}
 
 		[Command("summon", RunMode = RunMode.Async)]
 		[Summary("茶寮を召喚")]
-		public async Task Summon()
+		public Task Summon()
 		{
 			if (client.GetUser(SARYO_ID) is SocketUser saryo)
 			{
-				await Context.Channel.SendDisapperMessage($"༽୧༺ ‡۞卍✞༒ {saryo.Mention} ༒✞卍۞‡༻୨༼");
+				_ = Context.Channel.SendDisapperMessage($"༽୧༺ ‡۞卍✞༒ {saryo.Mention} ༒✞卍۞‡༻୨༼");
 			}
 			else
 			{
-				await SendError(Context.Channel, Error.UserNotFound);
+				_ = Context.Channel.SendError(Error.UserNotFound);
 			}
-
+			return Task.CompletedTask;
 		}
 
 		[Command("summon", RunMode = RunMode.Async)]
 		[Summary("ターゲットを召喚！")]
-		public async Task Summon([Summary("target")]string mention)
+		public Task Summon([Summary("target")] string mention)
 		{
-			if (MentionUtils.TryParseUser(mention,out var _))
+			if (MentionUtils.TryParseUser(mention, out var _))
 			{
-				await Context.Channel.SendDisapperMessage($"༽୧༺ ‡۞卍✞༒ {mention} ༒✞卍۞‡༻୨༼");
+				_ = Context.Channel.SendDisapperMessage($"༽୧༺ ‡۞卍✞༒ {mention} ༒✞卍۞‡༻୨༼");
 			}
 			else
 			{
-				await SendError(Context.Channel, Error.UserNotFound);
+				_ = Context.Channel.SendError(Error.UserNotFound);
 			}
+			return Task.CompletedTask;
 		}
 
 		private static readonly int ROLL_MIN_DEFAULT = 1;
 		private static readonly int ROLL_MAX_DEFAULT = 100;
 		[Command("roll", RunMode = RunMode.Async)]
 		[Summary("100面ダイスを振ります")]
-		public async Task Roll()
+		public Task Roll()
 		{
-			await Context.Channel.SendDisapperMessage($"{Context.User.Mention}が{ROLL_MAX_DEFAULT}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, ROLL_MAX_DEFAULT + 1)}！");
+			_ = Context.Channel.SendDisapperMessage($"{Context.User.Mention}が{ROLL_MAX_DEFAULT}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, ROLL_MAX_DEFAULT + 1)}！");
+			return Task.CompletedTask;
 		}
 		[Command("roll", RunMode = RunMode.Async)]
 		[Summary("X面ダイスを振ります")]
-		public async Task Roll([Summary("X")] int max)
+		public Task Roll([Summary("X")] int max)
 		{
 			if (max <= 0)
 			{
-				await SendError(Context.Channel, Error.SomethingIsWrong);
-				return;
+				_ = Context.Channel.SendError(Error.SomethingIsWrong);
 			}
-			await Context.Channel.SendDisapperMessage($"{Context.User.Mention}が{max}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, max + 1)}！");
+			else
+			{
+				_ = Context.Channel.SendDisapperMessage($"{Context.User.Mention}が{max}面ダイスを振った...{new Random().Next(ROLL_MIN_DEFAULT, max + 1)}！");
+			}
+			return Task.CompletedTask;
 		}
 		[Command("roll", RunMode = RunMode.Async)]
 		[Summary("指定された範囲の数字を一つ選びます")]
-		public async Task Roll([Summary("min")] int min ,[Summary("max")] int max)
+		public Task Roll([Summary("min")] int min, [Summary("max")] int max)
 		{
 			if (min > max)
 			{
-				Swap(ref min,ref max);
+				Swap(ref min, ref max);
 			}
-			await Context.Channel.SendDisapperMessage($"{Context.User.Mention}の為に{min}から{max}までの数字を一つ選んだ...{new Random().Next(min, max + 1)}！");
+			_ = Context.Channel.SendDisapperMessage($"{Context.User.Mention}の為に{min}から{max}までの数字を一つ選んだ...{new Random().Next(min, max + 1)}！");
+			return Task.CompletedTask;
 		}
 
 		[Command("flip", RunMode = RunMode.Async)]
 		[Summary("コインを投げます")]
-		public async Task Flip()
+		public Task Flip()
 		{
-			await Context.Channel.SendDisapperMessage($"{Context.User.Mention}がコインを投げた...{(new Random().Next(0, 2) == 0 ? "表" : "裏")}！");
+			_ = Context.Channel.SendDisapperMessage($"{Context.User.Mention}がコインを投げた...{(new Random().Next(0, 2) == 0 ? "表" : "裏")}！");
+			return Task.CompletedTask;
 		}
 
 		[Command("mute", RunMode = RunMode.Async)]
 		[Summary("watchingを強制ミュートします")]
-		public async Task Mute()
+		public Task Mute()
 		{
-			if (await Context.Channel.GetUserAsync(WATCHING_ID) is not SocketGuildUser watching || !watching.VoiceState.HasValue)
+			Task.Run(() =>
 			{
-				await SendError(Context.Channel, Error.UserNotFound);
-				return;
-			}
-			await watching.ModifyAsync((target) => target.Mute = true);
-			await Context.Channel.SendDisapperMessage("(ファミチキください)");
+				if (Context.Channel.GetUserAsync(WATCHING_ID).Result is not SocketGuildUser watching || !watching.VoiceState.HasValue)
+				{
+					_ = Context.Channel.SendError(Error.UserNotFound);
+				}
+				else
+				{
+					_ = watching.ModifyAsync((target) => target.Mute = true);
+					_ = Context.Channel.SendDisapperMessage("(ファミチキください)");
+				}
+			});
+			return Task.CompletedTask;
 		}
 
 		[Command("unmute", RunMode = RunMode.Async)]
 		[Summary("ミュート解除")]
-		public async Task Unmute()
+		public Task Unmute()
 		{
-			if (await Context.Channel.GetUserAsync(WATCHING_ID) is not SocketGuildUser watching || !watching.VoiceState.HasValue)
+			Task.Run(() =>
 			{
-				await SendError(Context.Channel, Error.UserNotFound);
-				return;
-			}
-			await watching.ModifyAsync((target) => target.Mute = false);
-			await Context.Channel.SendDisapperMessage("封印解除！");
+				if (Context.Channel.GetUserAsync(WATCHING_ID).Result is not SocketGuildUser watching || !watching.VoiceState.HasValue)
+				{
+					_ = Context.Channel.SendError(Error.UserNotFound);
+					return;
+				}
+				_ = watching.ModifyAsync((target) => target.Mute = false);
+				_ = Context.Channel.SendDisapperMessage("封印解除！");
+			});
+			return Task.CompletedTask;
 		}
 
 		[Command("sex", RunMode = RunMode.Async)]
 		[Summary("セックスしないと出られない部屋を作成します")]
-		public async Task CreateSexroom()
+		public Task CreateSexroom()
 		{
 			if (Context.Channel is SocketGuildChannel channel)
 			{
-				await SexRoom.Construct(Context.Channel, channel.Guild);
+				_ = SexRoom.Construct(Context.Channel, channel.Guild);
 			}
+			return Task.CompletedTask;
 		}
 
 		[Command("blackhole", RunMode = RunMode.Async)]
 		[Summary("ブラックホールを呼び出します")]
-		public async Task CreateBlackhole()
+		public Task CreateBlackhole()
 		{
 			if (Context.Channel is SocketGuildChannel channel)
 			{
-				await Blackhole.Construct(Context.Channel, channel.Guild, Context.User as SocketGuildUser);
+				_ = Blackhole.Construct(Context.Channel, channel.Guild, Context.User as SocketGuildUser);
 			}
+			return Task.CompletedTask;
 		}
 
 		[Command("whitehole", RunMode = RunMode.Async)]
 		[Summary("最後の手段->ブラックホールに突入する")]
-		public async Task CreateWhitehole()
+		public Task CreateWhitehole()
 		{
 			if (Context.Channel is SocketGuildChannel channel)
 			{
-				await Whitehole.Construct(Context.Channel, channel.Guild, Context.User as SocketGuildUser);
+				_ = Whitehole.Construct(Context.Channel, channel.Guild, Context.User as SocketGuildUser);
 			}
+			return Task.CompletedTask;
 		}
 
 		[Command("speak", RunMode = RunMode.Async)]
 		[Summary("チャット欄に打ち込んだ内容を喋ってくれます")]
-		public async Task SpeakingClientConnect() {
+		public Task SpeakingClientConnect()
+		{
 			if (Context.User is SocketGuildUser caller)
 			{
-				await Reader.Construct(caller, Context.Channel);
+				_ = new Reader(caller, Context.Channel);
 			}
+			return Task.CompletedTask;
 		}
 
 		[Command("bye", RunMode = RunMode.Async)]
 		[Summary("ボイスチャンネルのbotに別れを告げます")]
-		public async Task SpeakingClientDisconnect()
+		public Task SpeakingClientDisconnect()
 		{
-			await VoiceClient.Bye(Context);
+			if (VoiceClient.TryFind(Context.Guild, out var voice_client))
+			{
+				_ = voice_client.Disconnect();
+			}
+			else
+			{
+				_ = Context.Channel.SendError(Error.FizzedOut);
+			}
+			return Task.CompletedTask;
 		}
 		[Command("reset", RunMode = RunMode.Async)]
 		[Summary("Watchinpoが喋らなくなった時に押してください")]
-		public async Task SpeakerReset()
+		public Task SpeakerReset()
 		{
-			await VoiceClient.Reset(Context);
+			if (VoiceClient.TryFind(Context.Guild, out var voice_client))
+			{
+				var info = voice_client.debug_info;
+				_ = Context.Channel.SendDisapperMessage("再起動します…");
+				voice_client.Reset();
+				_ = Context.Channel.SendDisapperMessage($"デバッグ情報:queue={info.queue_count} playing={info.is_playing} living_process={info.living_ffmpeg}");
+			}
+			else
+			{
+				_ = Context.Channel.SendError(Error.FizzedOut);
+			}
+			return Task.CompletedTask;
 		}
 		[Command("enigma", RunMode = RunMode.Async)]
 		[Summary("saryo氏")]
-		public async Task SaryoLeadingTeamtoWIn()
+		public Task SaryoLeadsTeamtoWIn()
 		{
-			await Context.Channel.SendDisapperMessage($"https://www.youtube.com/watch?v=ZYKn9C25oQ4");
+			_ = Context.Channel.SendDisapperMessage($"https://www.youtube.com/watch?v=ZYKn9C25oQ4");
+			return Task.CompletedTask;
 		}
 	}
 }

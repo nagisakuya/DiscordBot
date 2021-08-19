@@ -18,57 +18,40 @@ namespace discord_bot
 {
 	class VoiceClient
 	{
-		static internal Dictionary<ulong, VoiceClient> active_voice_clients = new() { };
-		internal IAudioClient audio_client;
-		internal SocketGuild connected_guild;
-		internal AudioOutStream audio_stream;
+		static protected Dictionary<ulong, VoiceClient> active_voice_clients = new() { };
+		protected IAudioClient audio_client;
+		protected SocketGuild connected_guild;
+		protected AudioOutStream audio_stream;
 		protected Queue<Stream> queue = new() { };
-		protected bool is_playing = false;
-		internal static int living_ffmpeg_counter = 0;
-		protected VoiceClient() { }
-		protected VoiceClient(IAudioClient client, SocketGuild guild) { audio_client = client; connected_guild = guild; audio_stream = audio_client.CreatePCMStream(AudioApplication.Voice); }
-		public static async Task<VoiceClient> Construct(SocketGuildUser caller, ISocketMessageChannel text_channel = null)
+		protected bool playing = false;
+		protected static int living_ffmpeg_counter = 0;
+		public (int queue_count, bool is_playing, int living_ffmpeg) debug_info
 		{
-			if (!caller.VoiceState.HasValue)
+			get
 			{
-				await SendError(text_channel, Error.FizzedOut);
-				return null;
-			}
-			if (active_voice_clients.ContainsKey(caller.Guild.Id))
-			{
-				await SendError(text_channel, Error.FizzedOut);
-				return null;
-			}
-			VoiceClient new_client = new(await caller.VoiceState.Value.VoiceChannel.ConnectAsync(), caller.Guild);
-			active_voice_clients.Add(new_client.connected_guild.Id, new_client);
-			//Console.CancelKeyPress += new ConsoleCancelEventHandler(new_client.Delete);
-			return new_client;
-		}
-		public static async Task Bye(SocketCommandContext context)
-		{
-			if (active_voice_clients.TryGetValue(context.Guild.Id, out var client))
-			{
-				await context.Channel.SendDisapperMessage($"さようなら");
-				await client.Delete();
-			}
-			else
-			{
-				await SendError(context.Channel, Error.FizzedOut);
+				return (queue.Count, playing, living_ffmpeg_counter);
 			}
 		}
-		public static async Task Reset(SocketCommandContext context, bool message_flag = true)
+		public VoiceClient(SocketVoiceChannel channel, ISocketMessageChannel text_channel = null)
 		{
-			if (active_voice_clients.TryGetValue(context.Guild.Id, out var client))
-			{
-				if (message_flag)
-					await context.Channel.SendDisapperMessage($"再起動します...\nデバッグ情報:queue={client.queue.Count} playing={client.is_playing} living_process={living_ffmpeg_counter}");
-				client.queue.Clear();
-				client.is_playing = false;
-			}
-			else
-			{
-				await SendError(context.Channel, Error.FizzedOut);
-			}
+			Task.Run(()=>{
+				if (channel == null || active_voice_clients.ContainsKey(channel.Guild.Id))
+				{
+					_ = text_channel.SendError(Error.FizzedOut);
+				}
+				else
+				{
+					audio_client = channel.ConnectAsync().Result;
+					audio_stream = audio_client.CreatePCMStream(AudioApplication.Voice);
+					connected_guild = channel.Guild;
+					active_voice_clients.Add(connected_guild.Id, this);
+				}
+			});
+		}
+		public void Reset()
+		{
+			queue.Clear();
+			playing = false;
 		}
 		public async Task Play(string wav_path)
 		{
@@ -80,16 +63,16 @@ namespace discord_bot
 				RedirectStandardOutput = true,
 			});
 			queue.Enqueue(process.StandardOutput.BaseStream);
-			if (is_playing == false)
+			if (playing == false)
 			{
-				is_playing = true;
+				playing = true;
 				while (true)
 				{
 					var queue_first = queue.Dequeue();
 					await queue_first.CopyToAsync(audio_stream);
 					if (queue.Count == 0)
 					{
-						is_playing = false;
+						playing = false;
 						break;
 					}
 				}
@@ -101,15 +84,19 @@ namespace discord_bot
 				living_ffmpeg_counter++;
 			}
 		}
-		public void Delete(object sender, ConsoleCancelEventArgs args)
-		{
-			_ = audio_client.StopAsync();
-		}
-		public async virtual Task Delete()
+		public async virtual Task Disconnect()
 		{
 			await audio_client.StopAsync();
 			active_voice_clients.Remove(connected_guild.Id);
-			//Console.CancelKeyPress -= new ConsoleCancelEventHandler(Delete);
+		}
+		public static VoiceClient Find(IGuild guild)
+		{
+			return active_voice_clients.TryGetValue(guild.Id, out var client) ?
+				client : null;
+		}
+		public static bool TryFind(IGuild guild,out VoiceClient voice_client)
+		{
+			return active_voice_clients.TryGetValue(guild.Id, out voice_client);
 		}
 	}
 
@@ -121,23 +108,10 @@ namespace discord_bot
 		const int TEXT_LENGTH_LIMIT = 30;
 		const int DELETE_TIME = 60 * 1000;
 		protected IList<IUser> target_list = new List<IUser> { };
-		protected Reader() { }
-		protected Reader(VoiceClient from) { audio_client = from.audio_client; connected_guild = from.connected_guild; audio_stream = from.audio_stream; }
-		public static new async Task<Reader> Construct(SocketGuildUser caller, ISocketMessageChannel text_channel = null)
+		public Reader(SocketGuildUser caller, ISocketMessageChannel text_channel = null) : base(caller.VoiceChannel, text_channel)
 		{
-			var temp = await VoiceClient.Construct(caller, text_channel);
-			if (temp == null)
-			{
-				if (active_voice_clients.TryGetValue(caller.Guild.Id, out var active_one) && active_one is Reader active_reader)
-				{
-					await active_reader.AddTarget(caller, text_channel);
-				}
-				return null;
-			}
-			var reader = new Reader(temp);
-			await reader.AddTarget(caller, text_channel);
-			client.MessageReceived += reader.CatchMessage;
-			return reader;
+			AddTarget(caller, text_channel);
+			client.MessageReceived += CatchMessage;
 		}
 		public static string Format(string str)
 		{
@@ -147,33 +121,33 @@ namespace discord_bot
 			str = str.Replace("ｗ", "わら");
 			return str;
 		}
-		public async Task AddTarget(IUser add, ISocketMessageChannel text_channel = null)
+		public void AddTarget(IUser add, ISocketMessageChannel text_channel = null)
 		{
 			target_list.Add(add);
-			await text_channel?.SendDisapperMessage($"{add.Mention}の書いたことをしゃべります！");
+			text_channel?.SendDisapperMessage($"{add.Mention}の書いたことをしゃべります！");
 		}
-		public async override Task Delete()
+		public async override Task Disconnect()
 		{
 			client.MessageReceived -= CatchMessage;
-			await base.Delete();
+			await base.Disconnect();
 		}
-
 		public Task CatchMessage(SocketMessage message)
 		{
-			if (message is SocketUserMessage user_message && target_list.Contains(user_message.Author) && !CommandModule.IsCommand(user_message) && user_message.MentionedUsers.Count == 0)
+			Task.Run(() =>
 			{
-				string text = Format(message.Content);
-				double speed = text.Length > TEXT_LENGTH_LIMIT ? read_speed * text.Length / TEXT_LENGTH_LIMIT : read_speed;
-				Task.Run(() =>
+				if (message is SocketUserMessage user_message && target_list.Contains(user_message.Author) && !CommandModule.IsCommand(user_message) && user_message.MentionedUsers.Count == 0)
 				{
+					Console.WriteLine("that message is caught by reader");
+					string text = Format(message.Content);
+					double speed = text.Length > TEXT_LENGTH_LIMIT ? read_speed * text.Length / TEXT_LENGTH_LIMIT : read_speed;
 					string wav_path = JTalk.Generate(text, speed).Result;
 					var task = Play(wav_path);
 					Task.Delay(DELETE_TIME).Wait();
 					task.Wait();
 					message.DeleteAsync();
 					File.Delete(wav_path);
-				});
-			}
+				}
+			});
 			return Task.CompletedTask;
 		}
 	}

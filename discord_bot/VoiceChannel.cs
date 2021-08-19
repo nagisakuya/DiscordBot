@@ -15,22 +15,21 @@ namespace discord_bot
 	class VoiceChannel
 	{
 		protected internal RestVoiceChannel voice_channel;
-		protected VoiceChannel() { }
-		public static async Task<VoiceChannel> Construct(SocketGuild guild,Action<VoiceChannelProperties> func = null, string name = "VoiceChannel")
+
+		//this constructor is heavy
+		protected VoiceChannel(SocketGuild guild, Action<VoiceChannelProperties> func = null, string name = "VoiceChannel")
 		{
-			VoiceChannel @new = new();
-			@new.voice_channel = await guild.CreateVoiceChannelAsync(name, func);
-			Console.CancelKeyPress += new ConsoleCancelEventHandler(@new.Delete);
-			return @new;
+			voice_channel = guild.CreateVoiceChannelAsync(name, func).Result;
+			Console.CancelKeyPress += new ConsoleCancelEventHandler(CancelEvent);
 		}
-		public void Delete(object sender, ConsoleCancelEventArgs args)
+		public void CancelEvent(object sender, ConsoleCancelEventArgs args)
 		{
-			_ = voice_channel.DeleteAsync();
+			Delete().Wait(100);
 		}
 		public async virtual Task Delete()
 		{
-			await voice_channel.DeleteAsync();
-			Console.CancelKeyPress -= new ConsoleCancelEventHandler(Delete);
+			await voice_channel?.DeleteAsync();
+			Console.CancelKeyPress -= new ConsoleCancelEventHandler(CancelEvent);
 		}
 		public IList<SocketGuildUser> SpeakingUsersInGuild()
 		{
@@ -66,28 +65,32 @@ namespace discord_bot
 					await Delete();
 				}
 			}
-			
+
 		}
 	}
 	class SexRoom : VoiceChannel
 	{
 		private const string NAME = "〇ックスしないと出られない部屋";
-		protected SexRoom() { }
-		protected SexRoom(VoiceChannel from) { voice_channel = from.voice_channel; }
+		protected SexRoom(SocketGuild guild, Action<VoiceChannelProperties> func = null) : base(guild, func, NAME)
+		{
+			client.UserVoiceStateUpdated += DeleteIfEmpty;
+		}
 		public static async Task<SexRoom> Construct(ISocketMessageChannel text_channel, SocketGuild guild)
 		{
 			var speaking_users = SpeakingUsersInTheGuild(guild);
 			if (speaking_users.Count <= 0)
 			{
-				await SendError(text_channel, Error.NotEnoughUsers);
+				_ = text_channel.SendError(Error.NotEnoughUsers);
 				return null;
 			}
 			var targets = speaking_users.Count == 1
 				? ChooseRandom(speaking_users)
 				: ChooseRandom(speaking_users, 2);
-			var new_channel = new SexRoom(await VoiceChannel.Construct(guild, prop => {prop.CategoryId = targets[0].VoiceChannel.CategoryId;prop.UserLimit = 2; }, NAME)) ;
+
+			var new_channel = await Task.Run(()=>{
+			return new SexRoom(guild, channel => { channel.CategoryId = targets[0].VoiceChannel.CategoryId; channel.UserLimit = 2; });
+			});
 			await new_channel.Attract(targets);
-			client.UserVoiceStateUpdated += new_channel.DeleteIfEmpty;
 			return new_channel;
 		}
 		public async override Task Delete()
@@ -100,20 +103,23 @@ namespace discord_bot
 	{
 		static internal Dictionary<ulong, Blackhole> active_blackholes = new() { };
 		private const string NAME = "ブラックホール";
-		protected Blackhole() { }
-		protected Blackhole(VoiceChannel from) { voice_channel = from.voice_channel; }
-		public static async Task<Blackhole> Construct(ISocketMessageChannel text_channel, SocketGuild guild ,SocketGuildUser caller)
+		protected Blackhole(SocketGuild guild, Action<VoiceChannelProperties> func = null) : base(guild, func, NAME)
+		{
+			client.UserVoiceStateUpdated += Attract;
+			active_blackholes.Add(guild.Id, this);
+		}
+		public static async Task<Blackhole> Construct(ISocketMessageChannel text_channel, SocketGuild guild, SocketGuildUser caller)
 		{
 			if (active_blackholes.ContainsKey(guild.Id))
 			{
-				await SendError(text_channel, Error.FizzedOut);
+				_ = text_channel.SendError(Error.FizzedOut);
 				return null;
 			}
-			var category = caller?.VoiceChannel?.Category?.Id;
-			var new_channel = new Blackhole(await VoiceChannel.Construct(guild, prop => { prop.CategoryId = category; }, NAME));
-			active_blackholes.Add(guild.Id, new_channel);
+			var category = caller.VoiceChannel?.Category?.Id;
+			var new_channel = await Task.Run(() => {
+				return new Blackhole(guild, channel => { channel.CategoryId = category;});
+			});
 			await new_channel.Attract(guild.Users.ToList());
-			client.UserVoiceStateUpdated += new_channel.Attract;
 			return new_channel;
 		}
 		public void Disable()
@@ -121,7 +127,7 @@ namespace discord_bot
 			client.UserVoiceStateUpdated -= Attract;
 			client.UserVoiceStateUpdated += DeleteIfEmpty;
 		}
-	public async override Task Delete()
+		public async override Task Delete()
 		{
 			active_blackholes.Remove(voice_channel.GuildId);
 			client.UserVoiceStateUpdated -= Attract;
@@ -132,20 +138,23 @@ namespace discord_bot
 	class Whitehole : VoiceChannel
 	{
 		private const string NAME = "本棚の裏";
-		protected Whitehole() { }
-		protected Whitehole(VoiceChannel from) { voice_channel = from.voice_channel; }
+		protected Whitehole(SocketGuild guild, Action<VoiceChannelProperties> func = null) : base(guild, func, NAME)
+		{
+			client.UserVoiceStateUpdated += DeleteIfEmpty;
+		}
 		public static async Task<Whitehole> Construct(ISocketMessageChannel text_channel, SocketGuild guild, SocketGuildUser caller)
 		{
-			if (!Blackhole.active_blackholes.TryGetValue(guild.Id,out Blackhole blackhole))
+			if (!Blackhole.active_blackholes.TryGetValue(guild.Id, out Blackhole blackhole))
 			{
-				await SendError(text_channel, Error.FizzedOut);
+				_ = text_channel.SendError(Error.FizzedOut);
 				return null;
 			}
-			var new_whitehole = new Whitehole(await VoiceChannel.Construct(guild, prop => { prop.CategoryId = blackhole.voice_channel.CategoryId; }, NAME));
+			var new_channel = await Task.Run(() => {
+				return new Whitehole(guild, channel => { channel.CategoryId = blackhole.voice_channel.CategoryId; });
+			});
 			blackhole.Disable();
-			await new_whitehole.Attract(guild.Users.ToList());
-			client.UserVoiceStateUpdated += new_whitehole.DeleteIfEmpty;
-			return new_whitehole;
+			await new_channel.Attract(guild.Users.ToList());
+			return new_channel;
 		}
 		public async override Task Delete()
 		{
