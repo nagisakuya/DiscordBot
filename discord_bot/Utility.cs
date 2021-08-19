@@ -18,6 +18,7 @@ namespace discord_bot
 			NotEnoughUsers,
 			FizzedOut,
 			SomethingIsWrong,
+			Obstacle,
 		}
 		public static readonly Dictionary<Error, string> ErrorMessage = new()
 		{
@@ -26,6 +27,7 @@ namespace discord_bot
 			{ Error.UnknownCommand, $"すみません、上手く聞き取れませんでした" },
 			{ Error.NotEnoughUsers, $"*しかし誰も来なかった" },
 			{ Error.FizzedOut, $"しかし なにも おこらなかった！" },
+			{ Error.Obstacle, $"何かが邪魔で上手くいきません" },
 			{ Error.SomethingIsWrong, $"先生、何もしていないのに壊れました！" },
 		};
 		public static async Task SendError(this ISocketMessageChannel channel, Error error)

@@ -19,12 +19,12 @@ namespace discord_bot
 	class VoiceClient
 	{
 		static protected Dictionary<ulong, VoiceClient> active_voice_clients = new() { };
-		protected IAudioClient audio_client;
-		protected SocketGuild connected_guild;
-		protected AudioOutStream audio_stream;
-		protected Queue<Stream> queue = new() { };
-		protected bool playing = false;
-		protected static int living_ffmpeg_counter = 0;
+		private SocketGuild connected_guild;
+		private IAudioClient audio_client;
+		private AudioOutStream audio_stream;
+		private Queue<Stream> queue = new() { };
+		private bool playing = false;
+		private static int living_ffmpeg_counter = 0;
 		public (int queue_count, bool is_playing, int living_ffmpeg) debug_info
 		{
 			get
@@ -35,9 +35,13 @@ namespace discord_bot
 		public VoiceClient(SocketVoiceChannel channel, ISocketMessageChannel text_channel = null)
 		{
 			Task.Run(()=>{
-				if (channel == null || active_voice_clients.ContainsKey(channel.Guild.Id))
+				if (channel == null )
 				{
 					_ = text_channel.SendError(Error.FizzedOut);
+				}
+				if (active_voice_clients.ContainsKey(channel.Guild.Id))
+				{
+					_ = text_channel.SendError(Error.Obstacle);
 				}
 				else
 				{
@@ -107,7 +111,7 @@ namespace discord_bot
 		double read_speed = DEFAULT_READ_SPEED;
 		const int TEXT_LENGTH_LIMIT = 30;
 		const int DELETE_TIME = 60 * 1000;
-		protected IList<IUser> target_list = new List<IUser> { };
+		private IList<IUser> target_list = new List<IUser> { };
 		public Reader(SocketGuildUser caller, ISocketMessageChannel text_channel = null) : base(caller.VoiceChannel, text_channel)
 		{
 			AddTarget(caller, text_channel);
@@ -121,10 +125,28 @@ namespace discord_bot
 			str = str.Replace("ｗ", "わら");
 			return str;
 		}
-		public void AddTarget(IUser add, ISocketMessageChannel text_channel = null)
+		public void AddTarget(IUser user, ISocketMessageChannel text_channel = null)
 		{
-			target_list.Add(add);
-			text_channel?.SendDisapperMessage($"{add.Mention}の書いたことをしゃべります！");
+			if (!target_list.Contains(user))
+			{
+				target_list.Add(user);
+				text_channel?.SendDisapperMessage($"{user.Mention}の書いたことをしゃべります！");
+			}
+			else
+			{
+				text_channel?.SendError(Error.FizzedOut);
+			}
+		}
+		public void RemoveTarget(IUser user, ISocketMessageChannel text_channel = null)
+		{
+			if (target_list.Remove(user))
+			{
+				text_channel?.SendDisapperMessage($"{user.Mention}の書いたことをしゃべるのをやめました🥺");
+			}
+			else
+			{
+				text_channel?.SendError(Error.FizzedOut);
+			}
 		}
 		public async override Task Disconnect()
 		{
@@ -149,6 +171,16 @@ namespace discord_bot
 				}
 			});
 			return Task.CompletedTask;
+		}
+		public static new Reader Find(IGuild guild)
+		{
+			active_voice_clients.TryGetValue(guild.Id, out var temp);
+			return temp as Reader;
+		}
+		public static bool TryFind(IGuild guild, out Reader reader)
+		{
+			reader = Find(guild);
+			return reader != null ? true : false;
 		}
 	}
 }

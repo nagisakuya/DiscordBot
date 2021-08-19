@@ -229,15 +229,38 @@ namespace discord_bot
 
 		[Command("speak", RunMode = RunMode.Async)]
 		[Summary("チャット欄に打ち込んだ内容を喋ってくれます")]
-		public Task SpeakingClientConnect()
+		public Task Speak()
 		{
 			if (Context.User is SocketGuildUser caller)
 			{
-				_ = new Reader(caller, Context.Channel);
+				if (Reader.TryFind(Context.Guild, out var reader))
+				{
+					reader.AddTarget(caller);
+				}
+				else
+				{
+					_ = new Reader(caller, Context.Channel);
+				}
 			}
 			return Task.CompletedTask;
 		}
-
+		[Command("nospeak", RunMode = RunMode.Async)]
+		[Summary("読み上げを止めます")]
+		public Task StopReading()
+		{
+			if (Context.User is SocketGuildUser caller)
+			{
+				if (Reader.TryFind(Context.Guild, out var reader))
+				{
+					reader.RemoveTarget(caller);
+				}
+				else
+				{
+					_ = Context.Channel.SendError(Error.FizzedOut);
+				}
+			}
+			return Task.CompletedTask;
+		}
 		[Command("bye", RunMode = RunMode.Async)]
 		[Summary("ボイスチャンネルのbotに別れを告げます")]
 		public Task SpeakingClientDisconnect()
