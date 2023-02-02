@@ -95,6 +95,7 @@ namespace discord_bot
 		const int DELETE_TIME = 30 * 60 * 1000;
 		readonly static Regex URL_PATTERN = new("(http://|https://)[^ ]+");
 		readonly static Regex MENTION_PATTERN = new("<@.?[0-9]{18}>");
+		bool DELETE_FLAG = true;
 		private IList<IUser> target_list = new List<IUser> { };
 		public Reader(SocketGuildUser caller, ISocketMessageChannel text_channel = null) : base(caller.VoiceChannel, text_channel)
 		{
@@ -111,6 +112,7 @@ namespace discord_bot
 			str = URL_PATTERN.Replace(str, "");
 			str = Regex.Replace(str, "[ｗ]{" + GRASS_LIMIT + ",}", string.Concat(Enumerable.Repeat("わら", GRASS_LIMIT)));
 			str = str.Replace("ｗ", "わら");
+			str = str.Replace("～", "ー");
 			return str;
 		}
 		public void AddTarget(IUser user, ISocketMessageChannel text_channel = null)
@@ -141,6 +143,30 @@ namespace discord_bot
 			client.MessageReceived -= CatchMessage;
 			await base.Disconnect();
 		}
+		public void DisableDelete(ISocketMessageChannel text_channel = null)
+		{
+			if (DELETE_FLAG)
+			{
+				DELETE_FLAG = false;
+				text_channel?.SendDisapperMessage($"メッセージが消えなくなりました");
+			}
+			else
+			{
+				text_channel?.SendError(Error.FizzedOut);
+			}
+		}
+		public void EnableDelete(ISocketMessageChannel text_channel = null)
+		{
+			if (!DELETE_FLAG)
+			{
+				DELETE_FLAG = true;
+				text_channel?.SendDisapperMessage($"メッセージが消えるようになりました");
+			}
+			else
+			{
+				text_channel?.SendError(Error.FizzedOut);
+			}
+		}
 		private static bool HasNoMention(IMessage message)
 		{
 			return message.MentionedUserIds.Count == 0
@@ -164,7 +190,7 @@ namespace discord_bot
 					double speed = text.Length > TEXT_LENGTH_LIMIT ? read_speed * text.Length / TEXT_LENGTH_LIMIT : read_speed;
 					string wav_path = await JTalk.Generate(text, speed);
 					await Play(wav_path);
-					if (URLCount(message) == 0 && message.Attachments.Count == 0 && HasNoMention(message))
+					if (DELETE_FLAG && URLCount(message) == 0 && message.Attachments.Count == 0 && HasNoMention(message))
 					{
 						Console.WriteLine("that message will delete by reader");
 						await Task.Delay(DELETE_TIME);
